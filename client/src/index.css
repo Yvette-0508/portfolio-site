@@ -148,12 +148,18 @@ button {
   color: #c69fb6; /* pink pad reflections */
 }
 .lily-flowers {
-  color: #c9a24a; /* white blossom, yellow heart */
+  color: #d68fb2; /* pink petals */
+  text-shadow: 0 0 7px rgba(214, 143, 178, 0.5);
+  animation: gg-pulse 2.6s ease-in-out infinite alternate;
+}
+.lily-hearts {
+  color: #c9a24a; /* golden heart */
   text-shadow: 0 0 7px rgba(201, 162, 74, 0.5);
   animation: gg-pulse 2.6s ease-in-out infinite alternate;
 }
 @media (prefers-reduced-motion: reduce) {
-  .lily-flowers {
+  .lily-flowers,
+  .lily-hearts {
     animation: none;
   }
 }

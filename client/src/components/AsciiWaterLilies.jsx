@@ -70,18 +70,23 @@ const FLOWER_ART = [
   " .'//|\\\\'. ",
 ];
 
-// Blossom resting on the top edge of a pad: its lower petals overlap
-// the pad rim, and pad texture is cleared only under actual glyphs so
-// the pad keeps its shape around the flower.
-function drawFlower(flowers, pads, cx, padTopY) {
+// Blossom nested in the middle of its pad: a clean pocket is cleared
+// in the pad texture row by row (first glyph to last), so the leaf
+// keeps its shape around the flower. Petals go to the flowers layer,
+// the (@) heart to its own gold layer.
+function drawFlower(flowers, hearts, pads, cx, cy) {
   const artW = Math.max(...FLOWER_ART.map((l) => l.length));
   const x0 = cx - Math.floor(artW / 2);
-  const y0 = padTopY - FLOWER_ART.length + 2;
+  const y0 = cy - 2;
   FLOWER_ART.forEach((line, i) => {
-    for (let dx = 0; dx < line.length; dx++) {
-      if (line[dx] === " ") continue;
+    const first = line.search(/\S/);
+    const last = line.length - 1 - [...line].reverse().join("").search(/\S/);
+    for (let dx = first; dx <= last; dx++) {
       put(pads, y0 + i, x0 + dx, " ");
-      put(flowers, y0 + i, x0 + dx, line[dx]);
+      const ch = line[dx];
+      if (ch === " ") continue;
+      if (ch === "@" || ch === "(" || ch === ")") put(hearts, y0 + i, x0 + dx, ch);
+      else put(flowers, y0 + i, x0 + dx, ch);
     }
   });
 }
@@ -89,8 +94,9 @@ function drawFlower(flowers, pads, cx, padTopY) {
 function generateScene(cols, rows) {
   const pads = emptyGrid(cols, rows);
   const flowers = emptyGrid(cols, rows);
+  const hearts = emptyGrid(cols, rows);
   const padDefs = []; // kept for the reflections layer {cx, cy, w, h}
-  const scene = { cols, rows, pads, flowers, padDefs };
+  const scene = { cols, rows, pads, flowers, hearts, padDefs };
   if (cols < 16) return scene;
 
   PAD_LAYOUT.forEach((p, i) => {
@@ -103,7 +109,7 @@ function generateScene(cols, rows) {
 
   for (const i of FLOWER_PADS) {
     const p = padDefs[i];
-    drawFlower(flowers, pads, p.cx, p.cy - p.h);
+    drawFlower(flowers, hearts, pads, p.cx, p.cy);
   }
 
   return scene;
@@ -169,6 +175,7 @@ export default function AsciiWaterLilies({ rows = 54, charWidth = 6.6 }) {
           <pre className="ascii-art gg-layer lily-strands">{toText(refl)}</pre>
           <pre className="ascii-art gg-layer lily-pads">{toText(scene.pads)}</pre>
           <pre className="ascii-art gg-layer lily-flowers">{toText(scene.flowers)}</pre>
+          <pre className="ascii-art gg-layer lily-hearts">{toText(scene.hearts)}</pre>
         </>
       )}
     </div>
