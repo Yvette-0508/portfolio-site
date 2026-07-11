@@ -6,6 +6,7 @@ export default function SelectedProjects({
   title = "Selected Projects",
   subtitle = "A collection of things I've built",
   ctaLabel = "View Project ↗",
+  showDescription = true,
 }) {
   const [active, setActive] = useState(0);
 
@@ -41,7 +42,7 @@ export default function SelectedProjects({
               {isActive ? (
                 <div className="sp-details">
                   <h2 className="sp-details-title">{p.title}</h2>
-                  <p className="sp-desc">{p.description}</p>
+                  {showDescription && <p className="sp-desc">{p.description}</p>}
                   <div className="sp-tags">
                     {p.tags.map((t) => (
                       <span key={t} className="sp-tag">

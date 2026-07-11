@@ -38,6 +38,7 @@ export default function App() {
         <div className="overlay">
           <SelectedProjects
             projects={projects}
+            showDescription={false}
             onClose={() => setShowProjects(false)}
           />
         </div>
