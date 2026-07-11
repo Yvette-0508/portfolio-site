@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 // ------------------------------------------------------------
-// Monet's early "Water Lilies" as quiet ASCII: a handful of large
-// pads drifting on calm blue water, two white blossoms, and soft
-// reflections breathing under the pads. Layered <pre>s; the water
-// moves gently unless the user prefers reduced motion.
+// Monet's early "Water Lilies" as quiet ASCII: large filled pads
+// drifting on calm blue water, each an ellipse with the classic
+// notch cut toward its edge, and three blossoms resting on their
+// pads. Layered <pre>s; the water moves gently unless the user
+// prefers reduced motion.
 // ------------------------------------------------------------
 
 const rand = (n) => Math.floor(Math.random() * n);
@@ -38,48 +39,71 @@ const PAD_LAYOUT = [
   { x: 0.56, y: 0.91, w: 0.1 },
 ];
 
-// Two blossoms, like the painting: one upper-center, one bottom-left
-const FLOWER_ART = [" \\|/", "-=@=-"];
-const FLOWERS = [
-  { x: 0.44, y: 0.15 },
-  { x: 0.09, y: 0.9 },
+// Pads (by PAD_LAYOUT index) that carry a blossom: upper-center,
+// lower-left, center-right — like the painting
+const FLOWER_PADS = [5, 11, 9];
+
+// Filled ellipse pad with a thin notch cut toward the right edge.
+// Returns the pad's half-height so callers can find its rim.
+function drawPad(grid, cx, cy, w) {
+  const h = Math.max(1, Math.round(w / 8)); // half-height; chars are ~2x tall
+  const halfW = Math.round(w / 2);
+  for (let dy = -h; dy <= h; dy++) {
+    const t = dy / (h + 0.5);
+    const rowHalf = Math.round(halfW * Math.sqrt(Math.max(0, 1 - t * t)));
+    if (rowHalf < 1) continue;
+    for (let dx = -rowHalf; dx <= rowHalf; dx++) {
+      if (dy === 0 && dx > rowHalf * 0.5) continue; // the notch
+      let ch = "=";
+      if (Math.abs(dx) === rowHalf) ch = dx < 0 ? "(" : ")";
+      else if (dy === -h || dy === h) ch = "-";
+      put(grid, cy + dy, cx + dx, ch);
+    }
+  }
+  return h;
+}
+
+const FLOWER_ART = [
+  "  \\  |  /  ",
+  " '.\\\\|//.' ",
+  "--==(@)==--",
+  " .'//|\\\\'. ",
 ];
+
+// Blossom resting on the top edge of a pad: its lower petals overlap
+// the pad rim, and pad texture is cleared only under actual glyphs so
+// the pad keeps its shape around the flower.
+function drawFlower(flowers, pads, cx, padTopY) {
+  const artW = Math.max(...FLOWER_ART.map((l) => l.length));
+  const x0 = cx - Math.floor(artW / 2);
+  const y0 = padTopY - FLOWER_ART.length + 2;
+  FLOWER_ART.forEach((line, i) => {
+    for (let dx = 0; dx < line.length; dx++) {
+      if (line[dx] === " ") continue;
+      put(pads, y0 + i, x0 + dx, " ");
+      put(flowers, y0 + i, x0 + dx, line[dx]);
+    }
+  });
+}
 
 function generateScene(cols, rows) {
   const pads = emptyGrid(cols, rows);
   const flowers = emptyGrid(cols, rows);
-  const padDefs = []; // kept for the reflections layer {x, y, w}
+  const padDefs = []; // kept for the reflections layer {cx, cy, w, h}
   const scene = { cols, rows, pads, flowers, padDefs };
   if (cols < 16) return scene;
 
-  for (const p of PAD_LAYOUT) {
-    const w = Math.max(5, Math.round(cols * p.w * 0.55) + rand(3));
-    const x = Math.round(cols * p.x + rand(5) - 2);
-    const y = Math.round(rows * p.y + rand(3) - 1);
-    if (w >= 9) {
-      // big pad: two-row ellipse
-      put(pads, y, x + 1, ",");
-      for (let dx = 2; dx < w - 1; dx++) put(pads, y, x + dx, "-");
-      put(pads, y, x + w - 1, ".");
-      put(pads, y + 1, x, "(");
-      for (let dx = 1; dx < w; dx++) put(pads, y + 1, x + dx, "_");
-      put(pads, y + 1, x + w, ")");
-      padDefs.push({ x, y: y + 1, w });
-    } else {
-      put(pads, y, x, "(");
-      for (let dx = 1; dx < w; dx++) put(pads, y, x + dx, "_");
-      put(pads, y, x + w, ")");
-      padDefs.push({ x, y, w });
-    }
-  }
+  PAD_LAYOUT.forEach((p, i) => {
+    const w = Math.max(7, Math.round(cols * p.w * 0.8) + rand(3));
+    const cx = Math.round(cols * p.x + rand(5) - 2) + Math.round(w / 2);
+    const cy = Math.round(rows * p.y + rand(3) - 1);
+    const h = drawPad(pads, cx, cy, w);
+    padDefs.push({ cx, cy, w, h });
+  });
 
-  for (const f of FLOWERS) {
-    const fx = Math.round(cols * f.x);
-    const fy = Math.round(rows * f.y);
-    FLOWER_ART.forEach((line, i) => {
-      for (let dx = 0; dx < line.length; dx++)
-        if (line[dx] !== " ") put(flowers, fy + i, fx + dx, line[dx]);
-    });
+  for (const i of FLOWER_PADS) {
+    const p = padDefs[i];
+    drawFlower(flowers, pads, p.cx, p.cy - p.h);
   }
 
   return scene;
@@ -91,9 +115,9 @@ function renderReflections(scene, tick) {
   for (const p of scene.padDefs) {
     if (!chance(0.75)) continue;
     const len = Math.max(3, Math.round(p.w * 0.6));
-    const off = p.x + 1 + rand(Math.max(1, p.w - len));
+    const off = p.cx - Math.round(len / 2) + rand(3) - 1;
     for (let dx = 0; dx < len; dx++)
-      if (chance(0.6)) put(grid, p.y + 1, off + dx, chance(0.5) ? "~" : "-");
+      if (chance(0.6)) put(grid, p.cy + p.h + 1, off + dx, chance(0.5) ? "~" : "-");
   }
   return grid;
 }
@@ -102,7 +126,7 @@ function renderReflections(scene, tick) {
 function renderWater(scene, tick) {
   const { cols, rows } = scene;
   const grid = emptyGrid(cols, rows);
-  const dabs = Math.round(cols * rows * 0.003);
+  const dabs = Math.round(cols * rows * 0.002);
   for (let i = 0; i < dabs; i++) {
     const y = rand(rows);
     const x = rand(cols);
