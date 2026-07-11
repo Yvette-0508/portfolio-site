@@ -221,7 +221,7 @@ button {
 }
 
 .ld-name {
-  font-size: clamp(48px, 7vw, 96px);
+  font-size: clamp(40px, 5.5vw, 76px);
   font-weight: 300;
   letter-spacing: -0.02em;
   line-height: 1;
