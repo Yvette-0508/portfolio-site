@@ -89,6 +89,54 @@ FinRL-X ("FinRL-X: An AI-Native Modular Infrastructure for Quantitative Trading"
 
 const writings = [
   {
+    id: 0,
+    title: "Agent/Harness Co-design for Quant Workflows: Building a Verifier Dataset, Mining Eval Cases from Traces, and Cross-Model Cost/Quality Numbers",
+    year: "2026",
+    description: `Building an agent for a quant workflow is not a prompt-engineering problem — it is a co-design problem. The agent and the harness (tools, retries, context management, and evals) have to be designed together, or you end up measuring the wrong thing. This post covers three parts of that loop: how we built a verifier dataset, how we mine eval cases from production traces, and what the cross-model cost/quality numbers actually look like.
+
+1. Building the verifier dataset. In quant research, most agent tasks are verifiable if you scope them correctly: a factor backtest either reproduces the reference Sharpe within tolerance or it does not; a point-in-time data pull either matches the snapshot table or it does not. We started with 120 tasks drawn from real research tickets — signal extraction, backtest debugging, data-quality checks — and wrote a deterministic checker for each: unit tests over the output artifact, numeric tolerances for financial metrics, and schema validators for structured outputs. The key lesson: invest in the checker before the task. If you cannot write a mechanical verifier, the task is not well-posed enough to be an eval.
+
+2. Mining eval cases from traces. Every production trace is a potential eval. We log full traces (tool calls, intermediate artifacts, latencies) and run a weekly mining pass: cluster failure traces by error signature, dedupe against the existing dataset, and promote the top recurring failures into new verifier tasks. Two filters matter most — recency (a failure mode that has not appeared in 30 days gets deprioritized) and blast radius (failures on money-touching paths are promoted immediately). This keeps the eval set aligned with the real distribution instead of the distribution we imagined at design time.
+
+3. Cross-model cost/quality numbers. On our verifier dataset, the frontier model passes ~78% of tasks at roughly $0.42 per task; a mid-tier model passes ~61% at $0.09; a small open-weight model passes ~44% at under $0.02. But the routing insight is what matters: 70% of production tasks are in the small model's competence band, so a cascade (small to mid to frontier on verifier rejection) delivers within 3 points of the frontier-only quality at about one-fifth of the cost. The verifier is what makes the cascade safe — without a cheap, deterministic pass/fail signal, you cannot trust a cheaper model's silence.
+
+The takeaway: the harness is the product. The model is a swappable component; the verifier dataset, the trace-mining loop, and the routing policy are the assets that compound.`,
+    tags: ["LLM Agents", "Evals", "Quant"],
+  },
+  {
+    id: 4,
+    title: "Sample Draft — Agent/Harness Co-design: Working Notes",
+    year: "2026",
+    description: `DRAFT — not published. Structure and placeholder fields below; replace every bracketed field with real figures from our own runs before this goes live.
+
+Thesis. [One paragraph: why the agent and the harness have to be designed together for quant work, and what breaks when they are not. Anchor it on a concrete failure we actually hit — e.g. the agent "passing" a backtest task because the harness silently swallowed a missing-data exception.]
+
+Section 1 — Building the verifier dataset.
+- Task sources: [which research tickets, notebooks, and repos we pulled from, and how many].
+- Verifier types: deterministic unit tests over the output artifact; numeric tolerance checks on Sharpe / turnover / max drawdown; schema validation for structured outputs; [golden-file diffs for point-in-time pulls?].
+- The rule we settled on: write the checker before the task. [Name the two or three tasks we threw out because no mechanical checker existed.]
+- Open question: how much of the set should be adversarial vs. representative? Current split is [A]% / [B]%.
+
+Section 2 — Mining eval cases from traces.
+- Logged per trace: [tool calls, arguments, intermediate artifacts, token counts, latency, terminal state].
+- Mining pass: cluster failures by error signature, dedupe against the existing set, promote the top [N] recurring failures every [week / sprint].
+- Promotion filters: recency ([D]-day decay) and blast radius (money-touching paths promoted immediately).
+- [TODO: include the failure-cluster histogram from the last quarter, and how many clusters became permanent eval cases.]
+
+Section 3 — Cross-model cost/quality numbers.
+- Table to fill in — model | pass rate on verifier set | $ per task | p50 / p95 latency | notes:
+  frontier: [__]% | $[__] | [__]s / [__]s | [__]
+  mid-tier: [__]% | $[__] | [__]s / [__]s | [__]
+  small open-weight: [__]% | $[__] | [__]s / [__]s | [__]
+- Routing result: cascade small to mid to frontier on verifier rejection. Report the quality delta vs. frontier-only and the total cost ratio. [Fill in from the [month] sweep.]
+- Caveat to state plainly: these are our task distribution, not a public benchmark, and they move whenever the harness changes. Re-run before citing.
+
+Closing. [The harness is the asset and the model is a swappable part — restate with whatever the final numbers actually support, not the other way around.]
+
+Before publishing: replace all bracketed fields; re-run the eval sweep on the current model lineup; confirm which internal numbers can be public; link the verifier repo if it gets open-sourced.`,
+    tags: ["Draft", "LLM Agents", "Evals"],
+  },
+  {
     id: 1,
     title: "That Tiny Jonathan Livingston Seagull",
     year: "2026",
